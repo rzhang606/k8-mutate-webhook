@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-server-deployment
+  namespace: webhook
+  labels:
+    app: webhook-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook-server
+  template:
+    metadata:
+      labels:
+        app: webhook-server
+    spec:
+      containers:
+        - name: webhook-server
+          image: artifactory.teslamotors.com:2032/k8s/webhook:1.3
+          imagePullPolicy: IfNotPresent
+          # args:
+          #   - -tlsCertFile=/etc/webhook/certs/cert.pem
+          #   - -tlsKeyFile=/etc/webhook/certs/key.pem
+          resources:
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /etc/webhook/certs
+              readOnly: true
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: node-lifetime-webhook-certs
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-server
+  namespace: webhook
+  labels:
+    app: webhook-server
+spec:
+  selector:
+    app: webhook-server  # specified by the deployment/pod
+  ports:
+    - port: 443
+      targetPort: 8443  # name of port 8443 of the container
+
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: webhook-server
+  labels:
+    app: webhook-server
+webhooks:
+  - name: webhook-server.rizhang.svc
+    clientConfig:
+      service:
+        name: webhook-server # where AdmissionReview requests are sent
+        namespace: webhook
+        path: "/mutate"
+      caBundle: ${CA_PEM_B64}
+    rules:
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
