@@ -27,7 +27,7 @@
 ## Instructions to use
 
 1) run 'docker build -t [name] .'
-2) run 'docker tag [image-name] artifactory.teslamotors.com:2032/k8s/webhook'
-3) run 'docker push artifactory.teslamotors.com:2032/k8s/webhook'
+2) run 'docker tag [image-name] [image store]'
+3) run 'docker push [image store]'
 4) connect to the cluster and modify the context in the deploy.sh file
 5) run the deploy.sh file (requires kubectl set up, openssl command)
